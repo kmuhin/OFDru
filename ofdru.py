@@ -1,6 +1,6 @@
 # Copyright (c) 2020 Konstantin Mukhin Al.
-# Тестовый Модуль для работы с ofd.ru
-# Прототип для модуля с классами
+# Тестовый Модуль для отладки работы с API ofd.ru
+# Прототип для модуля с классами ofdru_class.py
 # https://ofd.ru/razrabotchikam
 
 from datetime import datetime
