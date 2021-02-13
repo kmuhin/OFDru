@@ -7,4 +7,5 @@ activate
 config.json
 authtoken.json
 venv-*
+ofd_config.py
 
