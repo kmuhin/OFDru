@@ -9,3 +9,7 @@ authtoken.json
 venv-*
 ofd_config.py
 
+/windows.http.server.cmd
+/windows.install.01.make.venvwindows.cmd
+/windows.install.02.venvwindows.modules.cmd
+/windows.start.venv.cmd
