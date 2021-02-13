@@ -4,9 +4,9 @@
     "Password"
   ],
   "kkt": {
-    "FNumber": "0000000000000000",
+    "FNumber": "",
     "INN": "000000000000",
-    "KKTNumber": "00000000000000",
-    "KKTRegNumber": "0000000000000000"
+    "KKTNumber": "",
+    "KKTRegNumber": ""
   }
 }

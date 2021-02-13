@@ -2,6 +2,7 @@
 # Модуль для работы с ofd.ru
 # https://ofd.ru/razrabotchikam
 
+import copy
 from datetime import datetime
 import requests
 
@@ -72,6 +73,7 @@ class OfdKey:
         json_auth = {'Login': login, 'Password': password}
         rep = requests.post(OfdKey.url_key, json=json_auth, headers=self.__headers)
         self.request = rep
+        data = ''
         if rep.status_code == 200:
             # рассматриваю ответ как json
             data = rep.json()
@@ -115,9 +117,11 @@ class OfdKkt:
     def __init__(self, key, data_kkt=''):
         self.request = ''
         self.key = key
+        self.data = []
         self.data_kkt = dict(data_kkt) if data_kkt else {}
         self.last_url = ''
         self.last_json_data = ''
+        self.info = ''
 
     def get_json_url(self, url):
         self.last_url = url
@@ -130,29 +134,43 @@ class OfdKkt:
 
     def get_kkt_info(self):
         """
-        Информация по всем ККТ.
+        Информация по ККТ.
 
-        Возвращает список всех ККТ т.к. data содержит список.
+        Видимо, может возвращать список всех ККТ т.к. data содержит список. Проверить не на чем.
         Из документации запрос описан так:
         https://ofd.ru/api/integration/v1/inn/{INN}/kkts?FNSerialNumber={FNumber}&KKTSerialNumber={KKTNumber}&KKTRegNumber={KKTRegNumber}&AuthToken={Code}
-        06.02.2021 Проверил укороченный запрос, выдает те же данные:
+        06.02.2021 Проверяю на одной зарегестрированной ККТ. 
+        Укороченный запрос выдает те же данные что и полный:
         https://ofd.ru/api/integration/v1/inn/{INN}/kkts?AuthToken={Code}
+        Если указать все поля пустые, выдает те же данные:
+        https://ofd.ru/api/integration/v1/inn/{INN}/kkts?FNSerialNumber=&KKTSerialNumber=&KKTRegNumber=&AuthToken={Code}
+        Если указать некорректные данные, сервер возвращает пустой список:
+        https://ofd.ru/api/integration/v1/inn/{INN}/kkts?FNSerialNumber=11111&KKTSerialNumber=11111&KKTRegNumber=111111&AuthToken={Code}
         """
+
         url_template = r'https://ofd.ru/api/integration/v1/inn/{INN}/kkts?FNSerialNumber={FNumber}&KKTSerialNumber={KKTNumber}&KKTRegNumber={KKTRegNumber}&AuthToken={Code}'
-        url = url_template.format(**self.data_kkt, Code=self.key)
+        url_template_short = r'https://ofd.ru/api/integration/v1/inn/{INN}/kkts?AuthToken={Code}'
+        if self.data_kkt.get('FNumber'):
+            url = url_template.format(**self.data_kkt, Code=self.key)
+        else:
+            # если в настройках ККТ передан только ИНН делаю короткий запрос и дополняю data_kkt
+            url = url_template_short.format(**self.data_kkt, Code=self.key)
         rep = self.get_json_url(url)
-        if rep:
+        data = ''
+        if rep and rep['Data']:
             data = rep['Data'][0]
-            self.info = data
-            if not data_kkt:
-                pass
+            self.info = copy.deepcopy(data)
+            if not self.data_kkt.get('FNumber'):
+                self.data_kkt['FNumber'] = data['FnNumber']
+                self.data_kkt['KKTNumber'] = data['SerialNumber']
+                self.data_kkt['KKTRegNumber'] = data['KktRegId']
         return data
 
     def get_receipts_short(self, date1='', date2=''):
         """
         Детальные чеки с наименованиями 'Items' за указанные период
 
-        Период не должен превышать 30 дней.
+        Период не должен превышать 30 дней. Время в дате не влияет.
         Возвращает чеки открытой смены.
         Возвращает чеки закрытых смен.
         """
@@ -167,13 +185,14 @@ class OfdKkt:
         data = ''
         if rep:
             data = rep['Data']
+            self.data = copy.deepcopy(data)
         return data
 
     def get_receipts(self, date1='', date2=''):
         """
         Короткие чеки без наименований за указанный период
 
-        Период не должен превышать 30 дней.
+        Период не должен превышать 30 дней. Время в дате не влияет.
         Показывает чеки открытой смены.
         """
         url_template = r'https://ofd.ru/api/integration/v1/inn/{INN}/kkt/{KKTRegNumber}/receipts?dateFrom={Date1}&dateTo={Date2}&AuthToken={Code}'
@@ -184,6 +203,7 @@ class OfdKkt:
         data = ''
         if rep:
             data = rep['Data']
+            self.data = copy.deepcopy(data)
         return data
 
     def get_receipts_shift(self, shift):
@@ -196,8 +216,10 @@ class OfdKkt:
         url_template = r'https://ofd.ru/api/integration/v1/inn/{INN}/kkt/{KKTRegNumber}/receipts?ShiftNumber={Shift}&FnNumber={FNumber}&AuthToken={Code}'
         url = url_template.format(**self.data_kkt, Code=self.key, Shift=shift)
         rep = self.get_json_url(url)
+        data = ''
         if rep:
             data = rep['Data']
+            self.data = copy.deepcopy(data)
         return data
 
     def get_z_reports(self, date1='', date2=''):
@@ -218,6 +240,7 @@ class OfdKkt:
         data = ''
         if rep:
             data = rep['Data']
+            self.data = copy.deepcopy(data)
         return data
 
     def get_receipt_by_id(self, rawid):
@@ -230,8 +253,10 @@ class OfdKkt:
         url_template = r'https://ofd.ru/api/integration/v1/inn/{INN}/kkt/{KKTRegNumber}/receipt/{RawId}?AuthToken={Code}'
         url = url_template.format(**self.data_kkt, Code=self.key, RawId=rawid)
         rep = self.get_json_url(url)
+        data = ''
         if rep:
             data = rep['Data']
+            self.data = copy.deepcopy(data)
         return data
 
     def get_receipt_by_shift(self, shift, docshift):
@@ -243,12 +268,14 @@ class OfdKkt:
         url_template = r'https://ofd.ru/api/integration/v1/inn/{INN}/kkt/{KKTRegNumber}/zreport/{ShiftNumber}/receipt/{DocShiftNumber}?AuthToken={Code}'
         url = url_template.format(**self.data_kkt, Code=self.key, ShiftNumber=shift, DocShiftNumber=docshift)
         rep = self.get_json_url(url)
+        data = ''
         if rep:
             data = rep['Data']
+            self.data = copy.deepcopy(data)
         return data
 
 
-def get_total_items_quantity(receipts):
+def get_total_items_quantity(receipts: list):
     """
     Кол-во товара по чекам
     возвращает словарь с именами товара Item в ключах и общей суммой по Quantity

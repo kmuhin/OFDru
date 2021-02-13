@@ -1,0 +1,10 @@
+*~
+*.swp
+*.pyc
+venv*/
+.idea
+activate
+config.json
+authtoken.json
+venv-*
+
