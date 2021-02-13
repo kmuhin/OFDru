@@ -1,5 +1,2 @@
 ipython
-pathlib
-bs4
 requests
-pillow
