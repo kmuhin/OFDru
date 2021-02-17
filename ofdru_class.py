@@ -4,14 +4,17 @@
 
 import copy
 from datetime import datetime
+from pathlib import Path
 import requests
 
 import json_save_restore
 
+workdir = Path(__file__).parent.absolute()
+
 
 class OfdKey:
     key: str
-    file_key = 'authtoken.json'
+    file_key = workdir.joinpath('authtoken.json')
     url_key = r'https://ofd.ru/api/Authorization/CreateAuthToken'
 
     def __init__(self):
@@ -289,8 +292,19 @@ def get_total_items_quantity(receipts: list):
     return items
 
 
-if __name__ == '__main__':
+def load_config():
+    file_config = workdir.joinpath('config.json')
+    config = json_save_restore.read_json(file_config)
+    return config
+
+
+def connect():
     token = OfdKey()
-    config = json_save_restore.read_json('config.json')
+    config = load_config()
     token.update_key(*config['auth'])
     ofd = OfdKkt(token, config['kkt'])
+    return ofd
+
+
+if __name__ == '__main__':
+    ofd = connect()
